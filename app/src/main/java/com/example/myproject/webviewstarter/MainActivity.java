@@ -14,6 +14,7 @@ import android.webkit.ConsoleMessage;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -58,7 +59,6 @@ public class MainActivity extends AppCompatActivity {
         web_settings.setAllowContentAccess(true);
         web_settings.setAllowFileAccessFromFileURLs(true);
         web_settings.setAllowUniversalAccessFromFileURLs(true);
-        web_settings.setSavePassword(false);
 
         webView.setWebChromeClient(new WebChromeClient() {
             public void openFileChooser(ValueCallback<Uri> uploadMsg, String acceptType, String capture) {
@@ -122,10 +122,6 @@ public class MainActivity extends AppCompatActivity {
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
-            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
-            }
-
-            @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 if (url.startsWith("mailto:") || url.startsWith("tel:") || url.startsWith("bbmi:") || url.startsWith("sms:")) {
                     Intent intent = new Intent(Intent.ACTION_VIEW,
@@ -141,8 +137,6 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, String url) {
-                WebResourceResponse response;
-
                 if (url.startsWith(STATIC_URL)) {
                     String assetpath = url.substring(STATIC_URL.length());
 
@@ -180,8 +174,7 @@ public class MainActivity extends AppCompatActivity {
                     Log.d(getApplicationName(getApplicationContext()), "Loading from assets: " + assetPath);
 
                     input = assetManager.open(assetPath);
-                    WebResourceResponse response =
-                            new WebResourceResponse(mimeType, encoding, input);
+                    WebResourceResponse response = new WebResourceResponse(mimeType, encoding, input);
 
                     return response;
                 } catch (IOException e) {
@@ -211,5 +204,32 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(mContext, toast, Toast.LENGTH_SHORT).show();
         }
 
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
+        if(requestCode==FILECHOOSER_RESULTCODE) {
+            if (null == this.mUploadMessage) {
+                return;
+            }
+
+            Uri result = null;
+
+            try {
+                if (resultCode != RESULT_OK) {
+                    result = null;
+                } else {
+                    // retrieve from the private variable if the intent is null
+                    result = intent == null ? mCapturedImageURI : intent.getData();
+                }
+            }
+            catch(Exception e) {
+                Toast.makeText(getApplicationContext(), "activity :"+e,
+                        Toast.LENGTH_LONG).show();
+            }
+
+            mUploadMessage.onReceiveValue(result);
+            mUploadMessage = null;
+        }
     }
 }
